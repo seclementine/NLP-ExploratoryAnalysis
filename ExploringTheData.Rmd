@@ -1,0 +1,160 @@
+---
+title: "Natural Language Processing - Exploratory Analysis"
+author: "Sarah"
+date: "9/20/2019"
+output: html_document
+---
+
+```{r data, cache=TRUE, include = FALSE}
+library(quanteda)
+twitt<-readLines("en_US.twitter.txt")
+
+newtxt<-readLines("en_US.news.txt")
+
+blogs<-readLines("en_US.blogs.txt")
+
+```
+
+###Exploring the Three Data Sets (Twitter, Blog, and News)
+
+Here's a data table that shows the summary statistics for the character length of each of the data sets.
+
+```{r explore, echo = FALSE}
+twittchar<-nchar(twitt)
+newschar<-nchar(newtxt)
+blogchar<-nchar(blogs)
+data.frame(Data = c("Twitter", "News", "Blog"), Length = c(length(twitt),length(newtxt),length(blogs)), max_char = c(max(twittchar),max(newschar),max(blogchar)), min_char = c(min(twittchar),min(newschar),min(blogchar)), mean_char = c(mean(twittchar),mean(newschar),mean(blogchar)), median_char = c(median(twittchar),median(newschar),median(blogchar)))
+
+```
+We can see that the Twitter data set has the most entries and the Blog data set has the longest entry with almost 41,000 characters.
+
+```{r wordcount,cache=TRUE, warnings=FALSE, results='hide', echo = FALSE, comment=FALSE}
+library(tokenizers)
+wct<-count_words(twitt)
+wcn<-count_words(newtxt)
+wcb<-count_words(blogs)
+```
+
+You can see a bit more about the data by looking at the box plot of the word count. 
+
+```{r boxplots, echo = FALSE}
+par(mfrow = c(1,3))
+boxplot(wct, main = "Twitter Data Word Count")
+boxplot(wcn, main = "News Data Word Count")
+boxplot(wcb, main = "Blog Data Word Count")
+```
+
+We can see that the twitter data set is much more compact (possibly because twitter limits the number of characters that can be used in a post). The other two are really squished.
+
+###Further Exploring
+
+I decided that for this portion of the exploratory analysis, I would look at 10,000 random lines from each of the different files and compare the top words from each resource. 
+
+Using Quanteda, I created tokens for each of the three data sets to create a dfm and a word cloud.
+
+For this portion of the assignment I am using stem = TRUE, remove_numbers = FALSE, remove_punct = TRUE, remove_symbols = TRUE, remove_hyphens = TRUE
+
+###Twitter Data 
+
+```{r twitt, echo = FALSE, message=FALSE, warning=FALSE}
+set.seed(4025)
+library(quanteda)
+samp<-sample(1:2360148, 10000, replace=FALSE)
+twittsamp<-twitt[samp]
+
+twitt.tokens<-tokens(twittsamp, what = "word",
+                        remove_numbers = FALSE, remove_punct = TRUE,
+                        remove_symbols = TRUE, remove_hyphens = TRUE)
+twitt.tokens<-tokens_tolower(twitt.tokens)
+twitt.tokens.dfm<-dfm(twitt.tokens, remove = stopwords(), stem = TRUE)
+```
+The sampled Twitter Data Set has `r nfeat(twitt.tokens.dfm)` words used, only those used at least 75 times are plotted in the word cloud.
+
+The top ten features are:
+```{r twittcloud, echo=FALSE}
+topfeatures(twitt.tokens.dfm)
+textplot_wordcloud(twitt.tokens.dfm,min_count = 75, random_order = FALSE,
+                   rotation = .25,
+                   color = RColorBrewer::brewer.pal(8, "Dark2"))
+```
+
+I found it interesting that "rt"" was used so frequently. I don't use twitter enough to understand the frequency so I explored to see in which cases it was being used
+
+```{r rt}
+rt<-grep(" rt ",twitt)
+head(twitt[rt])
+```
+
+For my predictive algorithm in the future, I think I will keep these different word cases separate. 
+
+###News Data
+```{r news, echo = FALSE}
+set.seed(4035)
+samp<-sample(1:1010242, 10000, replace=FALSE)
+newssamp<-newtxt[samp]
+
+news.tokens<-tokens(newssamp, what = "word",
+                        remove_numbers = FALSE, remove_punct = TRUE,
+                        remove_symbols = TRUE, remove_hyphens = TRUE)
+news.tokens<-tokens_tolower(news.tokens)
+news.tokens.dfm<-dfm(news.tokens, remove = stopwords(), stem = TRUE)
+```
+The sampled News dataset has `r nfeat(news.tokens.dfm)` features
+The top ten are:
+```{r newscloud, echo=FALSE}
+topfeatures(news.tokens.dfm)
+textplot_wordcloud(news.tokens.dfm,min_count = 75, random_order = FALSE,
+                   rotation = .25,
+                   color = RColorBrewer::brewer.pal(8, "Dark2"))
+```
+
+I found it quite interesting, but obvious that "said" is used more than double any of the other features
+
+###Blog Data
+```{r blog, echo = FALSE}
+set.seed(4026)
+samp<-sample(1:899288, 10000, replace=FALSE)
+blogsamp<-blogs[samp]
+
+blog.tokens<-tokens(blogsamp, what = "word",
+                        remove_numbers = FALSE, remove_punct = TRUE,
+                        remove_symbols = TRUE, remove_hyphens = TRUE)
+blog.tokens<-tokens_tolower(blog.tokens)
+blog.tokens.dfm<-dfm(blog.tokens, remove = stopwords(), stem = TRUE)
+```
+
+The sampled Blog data set has `r nfeat(blog.tokens.dfm)` features
+The top ten are:
+```{r blogcloud, echo = FALSE}
+topfeatures(blog.tokens.dfm)
+textplot_wordcloud(blog.tokens.dfm,min_count = 75, random_order = FALSE,
+                   rotation = .25,
+                   color = RColorBrewer::brewer.pal(8, "Dark2"))
+```
+
+###Combined Data
+
+```{r all3, echo=FALSE}
+library(quanteda)
+alldat<-rbind(twittsamp,blogsamp,newssamp)
+all.tokens<-tokens(alldat, what = "word",
+                        remove_numbers = FALSE, remove_punct = TRUE,
+                        remove_symbols = TRUE, remove_hyphens = TRUE)
+all.tokens<-tokens_tolower(all.tokens)
+all.tokens.dfm<-dfm(all.tokens, remove = stopwords(), stem = TRUE)
+```
+There are `r nfeat(all.tokens.dfm)` total features in the combined dataset of twitter, blog, and news.
+```{r allcloud, echo = FALSE}
+topfeatures(all.tokens.dfm)
+textplot_wordcloud(all.tokens.dfm,min_count = 75, random_order = FALSE,
+                   rotation = .25,
+                   color = RColorBrewer::brewer.pal(8, "Dark2"))
+```
+
+I found it interesting in the word spread of each of the data sets. There are a ton of blue words in the news set that means they aren't used as frequently. 
+
+###Conclusion
+
+These are three very different data sets and should be treated as such. The twitter data set will be more adventurous becuase it uses more words than there are in the already defined dictionary.
+
+Thanks for the review
